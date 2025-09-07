@@ -36,7 +36,7 @@ char* server_ip;
  ********* FUNCTIONS *********
  *****************************/
 
-// closes socket and exits with error
+// closes socket and exits with error message
 void abort_program(const char* msg) {
     printf(msg);
     close(sd);
@@ -51,17 +51,18 @@ void parse_args(int argc, char *argv[]) {
         abort_program("ERROR: Invalid arguments\nUSAGE: client <server port> <server IP address>\n");
     }
 
+    // get the port number
+    server_port = atoi(argv[1]);
+    if (server_port == 0){
+        abort_program("ERROR: Invalid port number\nUSAGE: client <server port> <server IP address>\n");
+    }
+
     // get the IP address
-    server_ip = argv[1];
+    server_ip = argv[2];
     if (inet_pton(AF_INET, server_ip, &(sin_addr.sin_addr)) <= 0) {
         abort_program("ERROR: Invalid port number\nUSAGE: client <server port> <server IP address>\n");
     }
 
-    // get the port number
-    server_port = atoi(argv[2]);
-    if (server_port == 0){
-        abort_program("ERROR: Invalid port number\nUSAGE: client <server port> <server IP address>\n");
-    }
     sin_addr.sin_port = htons(server_port);
 
 }
@@ -99,7 +100,7 @@ int get_user_input(char* in_buf) {
     }
 
     user_input_strlen = strlen(in_buf);
-    printf("Read %i characters from user input", user_input_strlen);
+    printf("Read %i characters from user input\n", user_input_strlen);
 
     return user_input_strlen;
 
@@ -121,10 +122,9 @@ void server_send_data(char* user_input_buf, int user_input_buflen) {
     printf("Sending user input string to server...\n");
     int sent_bytes = 0;
     while (sent_bytes < user_input_buflen) {  // loop until all bytes have been sent
-        int buf_offset = user_input_buflen + sent_bytes;
         int remaining_bytes = user_input_buflen - sent_bytes;
 
-        int just_sent_bytes = write(sd, (user_input_buf + buf_offset), remaining_bytes);
+        int just_sent_bytes = write(sd, (user_input_buf + sent_bytes), remaining_bytes);
         if (just_sent_bytes <= 0) {
             abort_program("ERROR: Could not send user input length\n");
         }
@@ -140,6 +140,8 @@ int server_receive_data(char* return_buffer) {
 
     // server return size
     int return_buffer_size;
+    // zero out the buffer
+    memset(return_buffer, 0, 256);
 
     // get buffer length
     int nl_return_buffer_size;
@@ -154,10 +156,9 @@ int server_receive_data(char* return_buffer) {
     printf("Retreiving server response string...\n");
     int received_bytes = 0;
     while (received_bytes < return_buffer_size) {  // loop until all bytes have been sent
-        int buf_offset = return_buffer_size + received_bytes;
         int remaining_bytes = return_buffer_size - received_bytes;
 
-        int just_received_bytes = read(sd, (return_buffer + buf_offset), remaining_bytes);
+        int just_received_bytes = read(sd, (return_buffer + received_bytes), remaining_bytes);
         if (just_received_bytes <= 0) {
             abort_program("ERROR: Could not send user input length\n");
         }
@@ -188,7 +189,7 @@ int main(int argc, char *argv[])
 
     // get user input
     char user_input_buf[256];
-    int user_input_buflen = get_user_input(user_input_buf) + 1; // +1 because of null terminator
+    int user_input_buflen = get_user_input(user_input_buf);
 
     // send the user input
     server_send_data(user_input_buf, user_input_buflen);
