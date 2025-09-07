@@ -108,9 +108,9 @@ int main(int argc, char *argv[])
       rc = read(connected_sd, ptr, sizeOfFilename-totalBytes);
       // remember that rc contains the number of bytes i received. 
       if (rc <=0){
-	printf ("this is awkward.. the other side quit while sending \n");
-	flag = 1;
-	break;
+        printf ("this is awkward.. the other side quit while sending \n");
+        flag = 1;
+        break;
       }
       // keeping track of number of bytes i read
       totalBytes += rc;

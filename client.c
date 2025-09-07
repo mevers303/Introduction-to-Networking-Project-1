@@ -99,7 +99,7 @@ int get_user_input(char* in_buf) {
     }
 
     user_input_strlen = strlen(in_buf);
-    printf("\nRead %i characters from user input", user_input_strlen);
+    printf("Read %i characters from user input", user_input_strlen);
 
     return user_input_strlen;
 
@@ -111,7 +111,8 @@ void server_send_data(char* user_input_buf, int user_input_buflen) {
 
     // send buffer length
     printf("Sending user input length to server...\n");
-    if (write(sd, &user_input_buflen, sizeof(int)) != 4) { // it should be able to send 4 bytes at once...
+    int nl_user_input_buflen = htonl(user_input_buflen);
+    if (write(sd, &nl_user_input_buflen, sizeof(int)) != 4) { // it should be able to send 4 bytes at once...
         abort_program("ERROR: Could not send user input length\n");
     }
     printf("Successfully sent user input length!\n");
@@ -130,6 +131,42 @@ void server_send_data(char* user_input_buf, int user_input_buflen) {
         sent_bytes += just_sent_bytes;
     }
     printf("Successfully sent user input string!\n");
+
+}
+
+
+// sends two messages to server: 1st the user input length, 2nd the user input
+int server_receive_data(char* return_buffer) {
+
+    // server return size
+    int return_buffer_size;
+
+    // get buffer length
+    int nl_return_buffer_size;
+    printf("Retrieving server response length...\n");
+    if (read(sd, &nl_return_buffer_size, sizeof(int)) != 4) { // it should be able to send 4 bytes at once...
+        abort_program("ERROR: Could not send user input length\n");
+    }
+    return_buffer_size = ntohl(nl_return_buffer_size);
+    printf("Successfully received server response length: %i\n", return_buffer_size);
+
+    // send buffer contents
+    printf("Retreiving server response string...\n");
+    int received_bytes = 0;
+    while (received_bytes < return_buffer_size) {  // loop until all bytes have been sent
+        int buf_offset = return_buffer_size + received_bytes;
+        int remaining_bytes = return_buffer_size - received_bytes;
+
+        int just_received_bytes = read(sd, (return_buffer + buf_offset), remaining_bytes);
+        if (just_received_bytes <= 0) {
+            abort_program("ERROR: Could not send user input length\n");
+        }
+        received_bytes += just_received_bytes;
+    }
+    printf("Successfully received server response string!\n");
+
+    // return the length of the buffer
+    return return_buffer_size;
 
 }
 
@@ -155,6 +192,13 @@ int main(int argc, char *argv[])
 
     // send the user input
     server_send_data(user_input_buf, user_input_buflen);
+
+    // get the server response
+    char server_response_buf[256];
+    int server_respons_buflen;
+    server_respons_buflen = server_receive_data(server_response_buf);
+    // print the returned data
+    printf("%s\n", server_response_buf);
 
     // success!
     printf("Client execution successful!\n");
