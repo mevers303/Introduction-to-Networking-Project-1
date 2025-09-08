@@ -37,7 +37,7 @@ char* server_ip;
 
 // closes socket and exits with error message
 void abort_program(const char* msg) {
-    printf(msg);
+    perror(msg);
     close(sd);
     exit(1);
 }
@@ -141,8 +141,6 @@ int server_receive_data(char* return_buffer) {
 
     // server return size
     int return_buffer_size;
-    // zero out the buffer
-    memset(return_buffer, 0, 256);
 
     // get buffer length
     int nl_return_buffer_size;
@@ -198,9 +196,11 @@ int main(int argc, char *argv[])
 
     // get the server response
     char server_response_buf[256];
-    int server_respons_buflen;
-    server_respons_buflen = server_receive_data(server_response_buf);
+    int server_response_buflen;
+    memset(server_response_buf, 0, 256);
+    server_response_buflen = server_receive_data(server_response_buf);
     // print the returned data
+    printf("Received %i bytes from server\n", server_response_buflen);
     printf("%s\n", server_response_buf);
 
     // success!
