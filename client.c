@@ -1,3 +1,12 @@
+// AUTHOR: Mark Evers <mark.evers@ucdenver.edu> <mevers303@gmail.com>
+// DATE:   9/8/2025
+// TITLE:  CSCI 3761: Project 1
+
+
+/*****************************
+ ******** DEPENDENCIES *******
+ *****************************/
+
 #include <string.h>
 #include <stdio.h>
 #include <sys/socket.h>
@@ -6,16 +15,6 @@
 #include <stdlib.h>
 #include <arpa/inet.h>
 
-/* the logic of my program/server
-   1: make sure the user started me with the right parameters
-   2: create a socket (STREAM/connection oriented)
-   3: ask ther user for a filename NOTE: not really doing file IO
-   4) figure out length of 'filename'
-   5) put the server's address info into my datastructure
-   6) connect() to the server
-   7) send length of filename
-   8) send filename
-*/
 
 /*****************************
  ****** GLOBAL VARIABLES *****
@@ -43,6 +42,7 @@ void abort_program(const char* msg) {
     exit(1);
 }
 
+
 // retreives arguments from command line and saves them to global variables
 void parse_args(int argc, char *argv[]) {
 
@@ -53,17 +53,18 @@ void parse_args(int argc, char *argv[]) {
 
     // get the port number
     server_port = atoi(argv[1]);
-    if (server_port == 0){
+    if (server_port <= 0){
         abort_program("ERROR: Invalid port number\nUSAGE: client <server port> <server IP address>\n");
     }
+    // convert to network short
+    sin_addr.sin_port = htons(server_port);
 
     // get the IP address
     server_ip = argv[2];
+    // convert IP address string to network long
     if (inet_pton(AF_INET, server_ip, &(sin_addr.sin_addr)) <= 0) {
         abort_program("ERROR: Invalid port number\nUSAGE: client <server port> <server IP address>\n");
     }
-
-    sin_addr.sin_port = htons(server_port);
 
 }
 
@@ -146,7 +147,7 @@ int server_receive_data(char* return_buffer) {
     // get buffer length
     int nl_return_buffer_size;
     printf("Retrieving server response length...\n");
-    if (read(sd, &nl_return_buffer_size, sizeof(int)) != 4) { // it should be able to send 4 bytes at once...
+    if (read(sd, &nl_return_buffer_size, sizeof(int)) != 4) { // don't loop send, it should be able to send 4 bytes at once...
         abort_program("ERROR: Could not send user input length\n");
     }
     return_buffer_size = ntohl(nl_return_buffer_size);
@@ -154,10 +155,10 @@ int server_receive_data(char* return_buffer) {
 
     // send buffer contents
     printf("Retreiving server response string...\n");
+    // loop until all bytes have been sent
     int received_bytes = 0;
-    while (received_bytes < return_buffer_size) {  // loop until all bytes have been sent
+    while (received_bytes < return_buffer_size) {
         int remaining_bytes = return_buffer_size - received_bytes;
-
         int just_received_bytes = read(sd, (return_buffer + received_bytes), remaining_bytes);
         if (just_received_bytes <= 0) {
             abort_program("ERROR: Could not send user input length\n");
@@ -189,7 +190,8 @@ int main(int argc, char *argv[])
 
     // get user input
     char user_input_buf[256];
-    int user_input_buflen = get_user_input(user_input_buf);
+    memset(user_input_buf, 0, 256);
+    int user_input_buflen = get_user_input(user_input_buf) + 1;  // +1 because of the null terminator
 
     // send the user input
     server_send_data(user_input_buf, user_input_buflen);
